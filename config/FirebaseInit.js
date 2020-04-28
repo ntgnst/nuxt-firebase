@@ -4,13 +4,13 @@ import 'firebase/firestore'
 import 'firebase/storage'
 
 const config = {
-  apiKey: 'AIzaSyBecs7aj41YQsobL99_fJq5s4-3zQIbCB4',
-  authDomain: 'my-react-project-5c67d.firebaseapp.com',
-  databaseURL: 'https://my-react-project-5c67d.firebaseio.com',
-  projectId: 'my-react-project-5c67d',
-  storageBucket: 'my-react-project-5c67d.appspot.com',
-  messagingSenderId: '694169897659',
-  appId: '1:694169897659:web:44bc67f7f4e9d26498779e'
+  apiKey: process.env.apiKey,
+  authDomain: process.env.authDomain,
+  databaseURL: process.env.databaseURL,
+  projectId: process.env.projectId,
+  storageBucket: process.env.storageBucket,
+  messagingSenderId: process.env.messagingSenderId,
+  appId: process.env.appId
 }
 
 if (!firebase.apps.length) {
