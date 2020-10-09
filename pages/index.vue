@@ -1,82 +1,117 @@
+/* eslint-disable */
 <template>
-  <no-ssr>
-    <div class="container">
-      <div>
-        <logo />
-        <h1 class="title">fireTest</h1>
-        <p>RealTimeData</p>
-        <no-ssr>
-          <ul>
-            <li v-for="user in list" :key="user.Ad">{{ user.Ad }}</li>
-          </ul>
-        </no-ssr>
-      </div>
-    </div>
-  </no-ssr>
+  <v-row>
+    <v-col cols="12" class="links">
+      <h3 class="display-1 mb-5">Firebase Messaging</h3>
+      <button
+        :disabled="listenersStarted"
+        color="primary"
+        outlined
+        @click="startListeners"
+      >
+        Start Listeners
+      </button>
+      <button
+        :disabled="permissionGranted || !listenersStarted"
+        color="primary"
+        outlined
+        @click="requestPermission"
+      >
+        Request Permission
+      </button>
+      <button color="primary" outlined @click="getIdToken">
+        Get ID Token
+      </button>
+      <button
+        :disabled="idToken === ''"
+        color="primary"
+        outlined
+        @click="sendTestMessage"
+      >
+        Send Test Push Message
+      </button>
+    </v-col>
+    <v-col cols="12">
+      <p>ID Token:</p>
+      {{ idToken }}
+    </v-col>
+  </v-row>
 </template>
 
-<script>
-import Logo from '~/components/Logo.vue'
-
-export default {
-  components: {
-    Logo
-  },
+<script lang="ts">
+import Vue from 'vue'
+export default Vue.extend({
   data() {
     return {
-      list: {
-        type: Array,
-        required: false,
-        default: () => []
-      }
+      listenersStarted: false,
+      permissionGranted: false,
+      idToken: ''
     }
   },
-  mounted() {
-    const docRef = this.$firestore
-      .collection('test')
-      .doc('test')
-      .collection('denemeler')
-    const arr = []
-    docRef.onSnapshot((collectionSnapshot) => {
-      collectionSnapshot.forEach((item) => {
-        console.log('docChanges', item)
-        arr.push({ Ad: item.data().Ad, Soyad: item.data().Soyad })
+  methods: {
+    async requestPermission() {
+      try {
+        const permission = await Notification.requestPermission()
+        this.permissionGranted = permission === 'granted'
+      } catch (e) {
+        console.error(e)
+      }
+    },
+    async getIdToken() {
+      let currentToken
+      try {
+        console.log('token call')
+        currentToken = await this.$fireMess.getToken()
+        console.log(currentToken)
+      } catch (e) {
+        console.error('An error occurred while retrieving token. ', e)
+        this.idToken = ''
+      }
+      if (currentToken) {
+        this.idToken = currentToken
+        console.log(currentToken)
+      } else {
+        // Show permission request.
+        console.info(
+          'No Instance ID token available. Request permission to generate one.'
+        )
+        // Show permission UI.
+        //  updateUIForPushPermissionRequired();
+        this.idToken = ''
+      }
+    },
+    startListeners() {
+      this.startOnMessageListener()
+      this.startTokenRefreshListener()
+      this.listenersStarted = true
+    },
+    startOnMessageListener() {
+      this.$fireMess.onMessage((payload) => {
+        console.info('Message received. ', payload)
       })
-    })
-    this.list = arr
+    },
+    startTokenRefreshListener() {
+      this.$fireMess.onTokenRefresh(async () => {
+        try {
+          const refreshedToken = await this.$fireMess.getToken()
+          this.idToken = refreshedToken
+        } catch (e) {
+          console.error('Unable to retrieve refreshed token ', e)
+        }
+      })
+    },
+    sendTestMessage() {
+      try {
+        setTimeout(() => {
+          // wait 5 seconds so you have time to switch away from the page to test the service-worker
+          this.$fireFunc.httpsCallable('sendTestPushMessage')({
+            token: this.idToken
+          })
+        }, 5000)
+      } catch (e) {
+        alert(e)
+      }
+    }
   }
-}
+})
 </script>
-
-<style>
-.container {
-  margin: 0 auto;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-}
-
-.title {
-  font-family: 'Quicksand', 'Source Sans Pro', -apple-system, BlinkMacSystemFont,
-    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  display: block;
-  font-weight: 300;
-  font-size: 100px;
-  color: #35495e;
-  letter-spacing: 1px;
-}
-
-.subtitle {
-  font-weight: 300;
-  font-size: 42px;
-  color: #526488;
-  word-spacing: 5px;
-  padding-bottom: 15px;
-}
-
-.links {
-  padding-top: 15px;
-}
-</style>
